@@ -3,21 +3,128 @@
 
 # Instructions
 # List each pair of actors that have worked together.
-SELECT DISTINCT
-	CONCAT(CONCAT(A.last_name, " ", A.first_name), " AND ", CONCAT(B.last_name, " ", B.first_name)) AS pair_of_actors
+
+SELECT
+	CONCAT(A.name_A, " ", B.name_B) AS pair_of_actor									# optional: , A.film_id, A.actor_id, A.name_A, B.actor_id, B.name_B
 FROM
-	film_actor F 
+	(
+	SELECT
+		F.film_id, F.actor_id, CONCAT(A.last_name, " ", A.first_name) AS name_A
+	FROM
+		film_actor F
+        LEFT JOIN
+			actor A
+		ON
+			F.actor_id = A.actor_id
+	) AS A
+CROSS JOIN
+	(
+  SELECT
+		F.film_id, F.actor_id, CONCAT(A.last_name, " ", A.first_name) AS name_B
+	FROM
+		film_actor F
+        LEFT JOIN
+			actor A
+		ON
+			F.actor_id = A.actor_id
+	) AS B
+WHERE 
+	A.film_id = B.film_id AND  A.actor_id < B.actor_id
+ORDER BY
+	A.film_id ASC, A.actor_id, B.actor_id;
+    
+    
+
+
+
+
+
+
+
+
+
+
+SELECT
+	F.film_id, FA.actor_id AS actor_A, FB.actor_id AS actor_B
+FROM
+	film_actor F
+    JOIN
+		film_actor FA
+	USING (actor_id)
+    JOIN
+		film_actor FB
+	USING (actor_id)
+GROUP BY
+	film_id, FA.actor_id, FB.actor_id;
+    
+WITH actor_A AS (
+	SELECT
+		film_id, actor_id
+	FROM
+		film_actor
+	GROUP BY
+		film_id, actor_id),
+	actor_B AS (
+    	SELECT
+		film_id, actor_id
+	FROM
+		film_actor
+	GROUP BY
+		film_id, actor_id)
+SELECT DISTINCT
+	F.film_id, A.actor_id, B.actor_id 					#CONCAT(CONCAT(NA.last_name, " ", NA.first_name), " AND ", CONCAT(NB.last_name, " ", NB.first_name)) AS pair_of_actors
+FROM
+	film_actor F
+    INNER JOIN
+		actor_A A
+	ON
+		F.actor_id = A.actor_id
+	INNER JOIN
+		actor_B B
+	ON
+		A.actor_id < B.actor_id 
+ORDER BY
+	F.film_id, A.actor_id, B.actor_id;
+
+WITH actor_A AS (
+	SELECT
+		F.film_id, F.actor_id, CONCAT(A.last_name, " ", A.first_name) AS name_A
+	FROM
+		film_actor F
 	INNER JOIN
 		actor A
 	ON
 		F.actor_id = A.actor_id
+	GROUP BY
+		F.film_id, F.actor_id, name_A),
+	actor_B AS (
+    	SELECT
+		F.film_id, F.actor_id, CONCAT(B.last_name, " ", B.first_name) AS name_B
+	FROM
+		film_actor F
 	INNER JOIN
 		actor B
 	ON
-		A.actor_id <> B.actor_id
+		F.actor_id = B.actor_id
+	GROUP BY
+		F.film_id, B.actor_id, name_B)
+SELECT DISTINCT
+	F.film_id, A.actor_id, B.actor_id, CONCAT(name_A, " AND ", name_B) AS pair_of_actors			#CONCAT(CONCAT(NA.last_name, " ", NA.first_name), " AND ", CONCAT(NB.last_name, " ", NB.first_name)) AS pair_of_actors
+FROM
+	film_actor F
+    INNER JOIN
+		actor_A A
+	ON
+		F.actor_id = A.actor_id
+	INNER JOIN
+		actor_B B
+	ON
+		A.actor_id < B.actor_id 
+WHERE
+	A.film_id = B.film_id
 ORDER BY
-	pair_of_actors ASC;
-
+	F.film_id, pair_of_actors, A.actor_id, B.actor_id;															#pair_of_actors ASC;
+    
 # For each film, list actor that has acted in more films.
 # FIRST LET'S CHECK THE MAX PER ACTOR ORDERED BY TITLE NAME
 WITH count_actor AS (
@@ -191,6 +298,6 @@ FROM
 	ON
 		A.actor_id = TA.actor_id
 GROUP BY
-	title
+	title, actor_name, M.max_per_film
 ORDER BY
 	title ASC;
