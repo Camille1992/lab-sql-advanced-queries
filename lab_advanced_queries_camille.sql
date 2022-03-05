@@ -81,7 +81,64 @@ GROUP BY
 ORDER BY
 	film_id ASC;
 
-WITH maximum AS (
+# MAX PER ACTOR ORDERED BY FILM TITLE BUT THIS TIME WITH THE ACTOR ID BECAUSE WE NEED IT
+WITH count_actor AS (
+	SELECT
+		actor_id,
+		COUNT(film_id) AS num_films
+	FROM
+		film_actor
+	GROUP BY
+		actor_id)
+SELECT 
+	F.title, CA.actor_id, CONCAT(A.last_name, " ", A.first_name) AS actor_name, CA.num_films
+FROM
+	film F
+	JOIN
+		film_actor FA
+	ON
+		F.film_id = FA.film_id
+	JOIN
+		actor A
+	ON
+		A.actor_id = FA.actor_id
+	LEFT JOIN
+		count_actor CA
+	ON
+		CA.actor_id = FA.actor_id
+ORDER BY
+	F.title ASC, CA.num_films DESC;
+
+
+# FINAL QUERY
+WITH top_actor AS (
+	WITH count_actor AS (
+		SELECT
+			actor_id,
+			COUNT(film_id) AS num_films
+		FROM
+			film_actor
+		GROUP BY
+			actor_id)
+	SELECT 
+		F.title, CA.actor_id, CONCAT(A.last_name, " ", A.first_name) AS actor_name, CA.num_films
+	FROM
+		film F
+		JOIN
+			film_actor FA
+		ON
+			F.film_id = FA.film_id
+		JOIN
+			actor A
+		ON
+			A.actor_id = FA.actor_id
+		LEFT JOIN
+			count_actor CA
+		ON
+			CA.actor_id = FA.actor_id
+	ORDER BY
+		F.title ASC, CA.num_films DESC),
+	maximum AS (
 		SELECT
 			film_id,
 			MAX(num_films) AS max_per_film
@@ -121,14 +178,18 @@ FROM
 		film_actor FA
 	ON
 		F.film_id = FA.film_id
-	LEFT JOIN
-		actor A
-	ON
-		A.actor_id = FA.actor_id
-	LEFT JOIN
+    LEFT JOIN
 		maximum M
 	ON
-		FA.film_id = M.film_id
+		FA.film_id = M.film_id            
+	LEFT JOIN
+		top_actor TA
+	ON
+		TA.actor_id = FA.actor_id and TA.num_films = M.max_per_film
+	INNER JOIN
+		actor A
+	ON
+		A.actor_id = TA.actor_id
 GROUP BY
 	title
 ORDER BY
